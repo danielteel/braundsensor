@@ -33,7 +33,7 @@ void onDisconnected(){
 void setup(){
     Serial.begin(115200);
     Serial.println("Initializing...");
-
+    WiFi.setMinSecurity(WIFI_AUTH_OPEN);
     WiFi.mode(WIFI_STA);
     WiFi.begin(WiFiSSID, WiFiPass);
     WiFi.setSleep(WIFI_PS_NONE);
