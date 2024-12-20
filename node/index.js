@@ -7,7 +7,7 @@ let logData=[];
 setInterval(()=>{
     try {
         // reading a JSON file synchronously
-        fs.writeFile("data-"+(new Date()).getTime()+".json", JSON.stringify(logData), ()=>{});
+        fs.writeFile("./collected/data-"+(new Date()).getTime()+".json", JSON.stringify(logData), ()=>{});
         logData=[];
     } catch (error) {
         // logging the error
