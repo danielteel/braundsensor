@@ -3,7 +3,6 @@
 
 enum NETSTATUS {
     NOTHING,
-    INITIAL_SENT,
     READY
 };
 
@@ -18,7 +17,7 @@ enum RECVSTATE {
 
 class Net {
     public:
-        Net(String deviceName, String encroKey, String address, uint16_t port);
+        Net(String deviceName, String address, uint16_t port);
         ~Net();
         bool loop();
 
@@ -34,12 +33,8 @@ class Net {
     private:
         WiFiClient Client;
         String deviceName;
-        uint8_t encroKey[32];
         String hostAddress;
         uint16_t port;
-
-        uint32_t clientsHandshake;
-        uint32_t serversHandshake;
 
         NETSTATUS netStatus;
         RECVSTATE recvState;
@@ -61,6 +56,6 @@ class Net {
         void attemptToConnect();
         bool sendPacket(uint8_t* data, uint32_t dataLength);
         void byteReceived(uint8_t data);
-        void packetRecieved(uint32_t recvdHandshake, uint8_t* data, uint32_t dataLength);
+        void packetRecieved(uint8_t* data, uint32_t dataLength);
         void processIncoming();
 };

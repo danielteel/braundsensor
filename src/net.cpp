@@ -1,16 +1,13 @@
 #include <Arduino.h>
 #include <Esp.h>
-#include "encro.h"
 #include "net.h"
 #include "utils.h"
 
 
-Net::Net(String deviceName, String encroKeyString, String address, uint16_t port){
+Net::Net(String deviceName, String address, uint16_t port){
     this->deviceName=deviceName;
     this->hostAddress=address;
     this->port=port;
-
-    buildKey(encroKeyString.c_str(), encroKey);
 }
 
 Net::~Net(){
@@ -31,6 +28,12 @@ void Net::errorOccured(String errorText){
         packetPayload=nullptr;
     }
 
+    this->netStatus=NETSTATUS::NOTHING;
+    this->recvState=RECVSTATE::LEN1;
+
+    wasConnected=false;
+    if (onDisconnected) onDisconnected();
+
     Serial.print("Net error occurred: ");
     Serial.println(errorText);
 }
@@ -41,21 +44,18 @@ void Net::attemptToConnect(){
             wasConnected=false;
             if (onDisconnected) onDisconnected();
         }
+        
         this->netStatus=NETSTATUS::NOTHING;
         this->recvState=RECVSTATE::LEN1;
+
         if (isTimeToExecute(this->lastConnectAttempt, connectAttemptInterval)){
             Serial.println("Attempting to connect to server...");
             if (this->Client.connect(this->hostAddress.c_str(), this->port)){
-                delay(500);
-                this->clientsHandshake=esp_random();
-
                 this->Client.write((uint8_t)this->deviceName.length());
                 this->Client.write(this->deviceName.c_str());
-                if (sendPacket(nullptr, 0)){
-                    this->netStatus=NETSTATUS::INITIAL_SENT;
-                }else{
-                    this->Client.stop();
-                }
+                this->netStatus=NETSTATUS::READY;
+                if (onConnected) onConnected();
+                wasConnected=true;
             }
         }
     }
@@ -85,40 +85,9 @@ bool Net::ready(){
 }
 
 bool Net::sendPacket(uint8_t* data, uint32_t dataLength){
-    uint32_t encryptedLength;
-    uint8_t* encrypted=encrypt(this->clientsHandshake, data, dataLength, encryptedLength, this->encroKey);
-    if (encrypted){
-        this->clientsHandshake++;
-        this->Client.write((uint8_t*)&encryptedLength, 4);
-        this->Client.write(encrypted, encryptedLength);
-        free(encrypted);
-        encrypted=nullptr;
-        return true;
-    }
-    return false;
-}
-
-void Net::packetRecieved(uint32_t recvdHandshake, uint8_t* data, uint32_t dataLength){
-    if (netStatus==NETSTATUS::INITIAL_SENT){
-            serversHandshake=recvdHandshake+1;
-            netStatus=NETSTATUS::READY;
-            wasConnected=true;
-            if (onConnected) onConnected();
-
-    }else if (netStatus==NETSTATUS::READY){
-        if (recvdHandshake==serversHandshake){
-            serversHandshake++;
-            if (packetReceived) packetReceived(data, dataLength);
-        }else{
-            //throw error, wrong handshake from expected
-            String errorText="Wrong handshake, expected ";
-            errorText+=String(serversHandshake)+" but recvd "+String(recvdHandshake);
-            errorOccured(errorText);
-            return;
-        }
-    }else{
-        errorOccured("Unknown netStatus");
-    }
+    this->Client.write((uint8_t*)&dataLength, 4);
+    this->Client.write(data, dataLength);
+    return true;
 }
 
 void Net::byteReceived(uint8_t data){
@@ -157,16 +126,9 @@ void Net::byteReceived(uint8_t data){
             payloadRecvdCount++;
             if (payloadRecvdCount>=packetLength){
                 recvState=RECVSTATE::LEN1;
-                uint32_t recvdHandshake=0;
-                uint32_t decryptedLength=0;
-                bool errorOccurred=false;
-                uint8_t* plainText=decrypt(recvdHandshake, packetPayload, packetLength, decryptedLength, encroKey, errorOccurred);
 
-                if (errorOccurred){
-                    errorOccured("Error occured decrypting payload");
-                }else{
-                    packetRecieved(recvdHandshake, plainText, decryptedLength);
-                }
+                if (packetReceived) packetReceived(packetPayload, packetLength);
+                
                 if (packetPayload){
                     free(packetPayload);
                     packetPayload=nullptr;
