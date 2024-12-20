@@ -9,10 +9,10 @@
 #include <SPI.h>
 #include <Adafruit_BME280.h>
 
-const char *WiFiSSID = "DnD";
+const char *WiFiSSID = "BraundData";
 const char *WiFiPass = "powerboner69";
 
-Net NetClient("airdata", "192.168.50.178", 4004);
+Net NetClient("airdata", "10.42.0.1", 4004);
 
 Adafruit_BME280 bme(5, 16, 17, 18); // use I2C interface
 
@@ -71,7 +71,7 @@ void loop(){
     if (NetClient.loop()){
         if (isTimeToExecute(lastPrintTime, 1000)){
             bme.takeForcedMeasurement();
-            String msg=String(millis())+", "+String(bme.readTemperature())+String(", ")+String(bme.readHumidity())+String(", ")+String(bme.readPressure())+String(", ")+String(bme.readAltitude(SENSORS_PRESSURE_SEALEVELHPA));
+            String msg=String(millis())+","+String(bme.readTemperature())+String(",")+String(bme.readHumidity())+String(",")+String(bme.readPressure())+String(",")+String(bme.readAltitude(SENSORS_PRESSURE_SEALEVELHPA));
             NetClient.sendString(msg);
             Serial.println(msg);
         }

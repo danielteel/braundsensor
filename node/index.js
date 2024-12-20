@@ -15,7 +15,7 @@ setInterval(()=>{
     
         throw error;
     }
-}, 30000*10);
+}, 30000);
 
 function onConnect(device){
     console.log('Device connected', device.name);
@@ -29,7 +29,7 @@ function onData(device, data){
     const str=textDecoder.decode(data);
     const [time, temp, humidity, pressure, pressureAltitude] = str.split(",");
     console.log("Time:",Math.round((new Date()).getTime()/1000), "Temp", Number(temp), "Humidity:", Number(humidity), "Pressure:", Number(pressure), "PA:",Math.floor(Number(pressureAltitude*3.281)));
-    logData.push({time, t: temp, h: humidity, p: pressure});
+    logData.push({tm: Number(time), t: Number(temp), h: Number(humidity), p: Number(pressure)});
 }
 
 createDeviceServer(4004, onConnect, onDisconnect, onData);
